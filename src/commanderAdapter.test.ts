@@ -109,6 +109,35 @@ describe('commanderAdapter arg passing', () => {
     // prepareCommandArgs validates bools before dispatch; executeCommand should not be reached
     expect(mockExecuteCommand).not.toHaveBeenCalled();
   });
+
+  it('uses a display placeholder in help while keeping the canonical kwargs key', async () => {
+    const placeholderCmd: CliCommand = {
+      site: 'xiaohongshu',
+      name: 'note',
+      access: 'read',
+      description: 'Read one note',
+      browser: false,
+      args: [{
+        name: 'note-id',
+        placeholder: 'full-note-url-with-xsec-token',
+        positional: true,
+        required: true,
+        help: 'Full signed note URL',
+      }],
+    };
+    const program = new Command();
+    const siteCmd = program.command('xiaohongshu');
+    registerCommandToProgram(siteCmd, placeholderCmd);
+    const registered = siteCmd.commands.find(command => command.name() === 'note')!;
+
+    expect(registered.helpInformation()).toContain(
+      'opencli xiaohongshu note <full-note-url-with-xsec-token>',
+    );
+
+    const signedUrl = 'https://www.xiaohongshu.com/explore/abc?xsec_token=token';
+    await program.parseAsync(['node', 'opencli', 'xiaohongshu', 'note', signedUrl]);
+    expect(mockExecuteCommand.mock.calls[0][1]).toMatchObject({ 'note-id': signedUrl });
+  });
 });
 
 describe('commanderAdapter boolean alias support', () => {

@@ -46,12 +46,14 @@ export function registerCommandToProgram(siteCmd: Command, cmd: CliCommand): voi
   const positionalArgs: typeof cmd.args = [];
   for (const arg of cmd.args) {
     if (arg.positional) {
-      const bracket = arg.required ? `<${arg.name}>` : `[${arg.name}]`;
+      const valueLabel = arg.placeholder ?? arg.name;
+      const bracket = arg.required ? `<${valueLabel}>` : `[${valueLabel}]`;
       subCmd.argument(bracket, arg.help ?? '');
       positionalArgs.push(arg);
     } else {
       const expectsValue = arg.required || arg.valueRequired;
-      const flag = expectsValue ? `--${arg.name} <value>` : `--${arg.name} [value]`;
+      const valueLabel = arg.placeholder ?? 'value';
+      const flag = expectsValue ? `--${arg.name} <${valueLabel}>` : `--${arg.name} [${valueLabel}]`;
       if (arg.required) subCmd.requiredOption(flag, arg.help ?? '');
       else if (arg.default != null) subCmd.option(flag, arg.help ?? '', String(arg.default));
       else subCmd.option(flag, arg.help ?? '');

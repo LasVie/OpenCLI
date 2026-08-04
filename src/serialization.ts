@@ -12,6 +12,7 @@ import { fullName, strategyLabel } from './registry.js';
 
 export type SerializedArg = {
   name: string;
+  placeholder?: string;
   type: string;
   required: boolean;
   valueRequired: boolean;
@@ -25,6 +26,7 @@ export type SerializedArg = {
 export function serializeArg(a: Arg): SerializedArg {
   return {
     name: a.name,
+    ...(a.placeholder ? { placeholder: a.placeholder } : {}),
     type: a.type ?? 'string',
     required: !!a.required,
     valueRequired: !!a.valueRequired,
@@ -61,7 +63,8 @@ export function serializeCommand(cmd: CliCommand) {
 export function formatArgSummary(args: Arg[]): string {
   return args
     .map(a => {
-      if (a.positional) return a.required ? `<${a.name}>` : `[${a.name}]`;
+      const valueLabel = a.placeholder ?? a.name;
+      if (a.positional) return a.required ? `<${valueLabel}>` : `[${valueLabel}]`;
       return a.required ? `--${a.name}` : `[--${a.name}]`;
     })
     .join(' ');
@@ -82,13 +85,15 @@ export function formatCommandExample(cmd: CliCommand): string {
   const parts = ['opencli', cmd.site, cmd.name];
   for (const arg of cmd.args) {
     if (arg.positional && arg.required) {
-      parts.push(formatValuePlaceholder(arg.name));
+      parts.push(formatValuePlaceholder(arg.placeholder ?? arg.name));
     }
   }
   for (const arg of cmd.args) {
     if (arg.positional || !arg.required) continue;
     parts.push(`--${arg.name}`);
-    if (arg.type !== 'bool' && arg.type !== 'boolean') parts.push(formatValuePlaceholder(arg.name));
+    if (arg.type !== 'bool' && arg.type !== 'boolean') {
+      parts.push(formatValuePlaceholder(arg.placeholder ?? arg.name));
+    }
   }
   parts.push('-f', 'yaml');
   return parts.join(' ');
@@ -99,7 +104,7 @@ export function formatRegistryHelpText(cmd: CliCommand): string {
   const lines: string[] = [];
   const choicesArgs = cmd.args.filter(a => a.choices?.length);
   for (const a of choicesArgs) {
-    const prefix = a.positional ? `<${a.name}>` : `--${a.name}`;
+    const prefix = a.positional ? `<${a.placeholder ?? a.name}>` : `--${a.name}`;
     const def = a.default != null ? `  (default: ${a.default})` : '';
     lines.push(`  ${prefix}: ${summarizeChoices(a.choices!)}${def}`);
   }

@@ -16,6 +16,7 @@
  *     --topics 生活,旅行
  */
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { CommandExecutionError, ArgumentError } from '@jackwener/opencli/errors';
 import { cli, Strategy } from '@jackwener/opencli/registry';
@@ -989,33 +990,71 @@ async function currentComposerMediaCount(page) {
         .map((sel) => Array.from(document.querySelectorAll(sel)))
         .flat()
         .find((el) => visibleBox(el));
-      const root = titleEl?.closest('form, [class*="publish"], [class*="editor"], [class*="note"]') || document.body;
+      // The title and media strip are siblings in the current creator UI.
+      // Looking for the nearest class containing "publish" from the title selects
+      // publish-page-content-base, which excludes the generated thumbnails.
+      const mediaStrip = document.querySelector('.publish-page-content-media')
+        || document.querySelector('[class*="publish-page-content-media"]');
+      const titleForm = titleEl?.closest('form');
+      const titleSection = titleEl?.closest('[class*="publish-page-content"]');
+      const root = mediaStrip || titleForm || titleSection?.parentElement || document.body;
       const seen = new Set();
       let count = 0;
-      for (const el of Array.from(root.querySelectorAll('img, video, canvas, [style*="background-image"]'))) {
+      const candidates = root.querySelectorAll([
+        'img',
+        'video',
+        'canvas',
+        '[style*="background-image"]',
+        '[class*="image"]',
+        '[class*="img"]',
+        '[class*="cover"]',
+        '[class*="media"]',
+      ].join(','));
+      for (const el of Array.from(candidates)) {
         if (!visibleMedia(el)) continue;
         const rect = el.getBoundingClientRect();
-        const src = el.currentSrc || el.src || el.getAttribute('src') || el.style?.backgroundImage || '';
+        const tag = String(el.tagName || '').toLowerCase();
+        const computedBackground = window.getComputedStyle(el)?.backgroundImage || '';
+        const src = el.currentSrc
+          || el.src
+          || el.getAttribute('src')
+          || el.poster
+          || el.getAttribute('poster')
+          || el.style?.backgroundImage
+          || (computedBackground !== 'none' ? computedBackground : '');
+        if (!src && tag !== 'canvas') continue;
         const key = src || String(Math.round(rect.left)) + ':' + String(Math.round(rect.top));
         if (seen.has(key)) continue;
         seen.add(key);
         count += 1;
       }
-      return { ok: true, count };
+      return {
+        ok: true,
+        count,
+        rootClass: String(root.className || ''),
+      };
     })()
   `);
     return unwrapBrowserResult(result);
 }
 async function assertComposerMediaCount(page, expectedCount, label) {
-    const state = await currentComposerMediaCount(page);
+    let state;
+    const attempts = 20;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+        state = await currentComposerMediaCount(page);
+        if (state && typeof state.count === 'number' && state.count >= expectedCount)
+            return;
+        if (attempt < attempts - 1)
+            await page.wait({ time: 0.5 });
+    }
+    const screenshotPath = path.join(os.tmpdir(), 'xhs_publish_media_debug.png');
     if (!state || typeof state.count !== 'number') {
         throw new CommandExecutionError(`${label}: could not verify current composer media count`);
     }
-    if (state.count < expectedCount) {
-        await page.screenshot({ path: '/tmp/xhs_publish_media_debug.png' });
-        throw new CommandExecutionError(`${label}: expected at least ${expectedCount} visible media item(s), got ${state.count}. ` +
-            'Debug screenshot: /tmp/xhs_publish_media_debug.png');
-    }
+    await page.screenshot({ path: screenshotPath });
+    throw new CommandExecutionError(`${label}: expected at least ${expectedCount} visible media item(s), got ${state.count}. ` +
+        `Checked ${state.rootClass ? `within ${state.rootClass}` : 'the editor'} for 10 seconds. ` +
+        `Debug screenshot: ${screenshotPath}`);
 }
 /**
  * Drive the full 文字配图 sub-flow: entry → type cards → 生成图片 → pick style → 下一步.

@@ -19,6 +19,7 @@ export interface ManifestEntry {
   browser: boolean;
   args: Array<{
     name: string;
+    placeholder?: string;
     type?: string;
     default?: unknown;
     required?: boolean;

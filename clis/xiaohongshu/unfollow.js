@@ -1,12 +1,10 @@
 /**
- * Xiaohongshu unfollow — clicks the 已关注 button on a user's profile page and
- * confirms the resulting "取消关注" modal.
+ * Xiaohongshu unfollow — clicks the 已关注 button on a user's profile page,
+ * confirms a "取消关注" modal when present, and verifies the final button state.
  *
- * Mirror of follow.js. The extra step versus follow is the confirmation modal:
- * xhs pops a "确定不再关注 TA 了吗" dialog rendered in a `.d-modal-footer`
- * container (same widget used by delete-note's confirmation). We find the
- * 确定 button within that footer and click it, then verify the profile-header
- * button flipped back to 关注.
+ * Xiaohongshu currently has two UI variants: one pops a confirmation modal,
+ * while another unfollows immediately. The final profile-header button state,
+ * not modal presence, is the success criterion.
  *
  * Requires: logged into www.xiaohongshu.com in Chrome.
  */
@@ -196,9 +194,10 @@ cli({
     args: [
         {
             name: 'user-id',
+            placeholder: 'full-profile-url',
             required: true,
             positional: true,
-            help: 'User ID (e.g. 5d8f88dc0000000001005d3a) or profile URL',
+            help: 'Full profile URL preferred; a raw user ID remains supported for compatibility',
         },
     ],
     columns: ['status', 'user_id', 'url'],
@@ -246,25 +245,29 @@ cli({
                 return [{ status: 'not-following', user_id: userId, url }];
             }
 
-            // Step 2: confirm the unfollow modal. Wait for the modal to mount
-            // first — xhs uses a CSS transition before the footer becomes
-            // interactive.
+            // Step 2: confirm the unfollow modal when this UI variant has one.
+            // Other variants apply the unfollow immediately and show no modal.
+            // Wait first because modal-based variants use a CSS transition.
             await page.wait({ time: MODAL_SETTLE_MS / 1000 });
             const confirmResult = requireActionResult(
                 await page.evaluate(buildConfirmModalScript()),
                 'confirm-modal',
             );
-            if (!confirmResult.ok) {
+            if (!confirmResult.ok && confirmResult.kind !== 'no_modal') {
                 throw new CommandExecutionError(
                     `xiaohongshu/unfollow: confirmation modal step failed (${confirmResult.kind ?? 'no kind reported'})`,
                 );
             }
 
-            // Step 3: verify the profile button text flipped back to 关注.
+            // Step 3: always verify the profile button text flipped back to
+            // 关注. This proves success for both modal and direct-toggle flows.
             const verifyRaw = unwrapEvaluateResult(await page.evaluate(buildVerifyFollowFlippedScript()));
             if (!verifyRaw || typeof verifyRaw !== 'object' || verifyRaw.ok !== true) {
+                const modalContext = confirmResult.kind === 'no_modal'
+                    ? 'no confirmation modal appeared; '
+                    : '';
                 throw new CommandExecutionError(
-                    `xiaohongshu/unfollow: ${verifyRaw?.reason ?? 'state verification failed'}`,
+                    `xiaohongshu/unfollow: ${modalContext}${verifyRaw?.reason ?? 'state verification failed'}`,
                 );
             }
             return [{ status: 'unfollowed', user_id: userId, url }];

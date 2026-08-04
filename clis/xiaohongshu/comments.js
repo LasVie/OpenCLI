@@ -290,7 +290,13 @@ export const command = cli({
     strategy: Strategy.COOKIE,
     navigateBefore: false,
     args: [
-        { name: 'note-id', required: true, positional: true, help: 'Full Xiaohongshu note URL with xsec_token' },
+        {
+            name: 'note-id',
+            placeholder: 'full-note-url-with-xsec-token',
+            required: true,
+            positional: true,
+            help: 'Full Xiaohongshu note URL with xsec_token',
+        },
         { name: 'limit', type: 'int', default: 20, help: 'Number of top-level comments (max 50)' },
         { name: 'with-replies', type: 'boolean', default: false, help: 'Include nested replies; reply_to is the direct target shown by the page' },
     ],

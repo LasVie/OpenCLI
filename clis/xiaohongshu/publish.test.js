@@ -958,6 +958,38 @@ describe('xiaohongshu publish 文字配图 flow', () => {
             .find((code) => code.includes('__opencli_xhs_composer_media_count'));
         expect(mediaCountCode).toContain('.find((el) => visibleBox(el))');
         expect(mediaCountCode).toContain('if (!visibleMedia(el)) continue');
+        expect(mediaCountCode).toContain("document.querySelector('.publish-page-content-media')");
+        // Current XHS layout places the title form and generated-card strip in
+        // sibling containers. Execute the injected detector against that shape
+        // so a future broad closest('[class*=publish]') regression is caught.
+        const rect = { width: 80, height: 80, left: 10, top: 10 };
+        const generatedCard = {
+            offsetParent: {},
+            tagName: 'IMG',
+            className: 'img preview',
+            currentSrc: 'blob:https://creator.xiaohongshu.com/generated-card',
+            src: 'blob:https://creator.xiaohongshu.com/generated-card',
+            style: {},
+            getAttribute: (name) => name === 'src' ? 'blob:https://creator.xiaohongshu.com/generated-card' : '',
+            getBoundingClientRect: () => rect,
+        };
+        const mediaStrip = {
+            className: 'publish-page-content-media',
+            querySelectorAll: () => [generatedCard],
+        };
+        const titleElement = {
+            offsetParent: {},
+            getBoundingClientRect: () => ({ width: 500, height: 24, left: 0, top: 200 }),
+            closest: () => null,
+        };
+        const fakeDocument = {
+            querySelectorAll: () => [titleElement],
+            querySelector: (selector) => selector === '.publish-page-content-media' ? mediaStrip : null,
+            body: { className: '', querySelectorAll: () => [] },
+        };
+        const fakeWindow = { getComputedStyle: () => ({ backgroundImage: 'none' }) };
+        const detected = Function('document', 'window', `return ${mediaCountCode.trim()}`)(fakeDocument, fakeWindow);
+        expect(detected).toMatchObject({ count: 1, rootClass: 'publish-page-content-media' });
         expect(rows[0].status).toContain('发布成功');
     });
 

@@ -165,9 +165,10 @@ cli({
     args: [
         {
             name: 'user-id',
+            placeholder: 'full-profile-url',
             required: true,
             positional: true,
-            help: 'User ID (e.g. 5d8f88dc0000000001005d3a) or profile URL',
+            help: 'Full profile URL preferred; a raw user ID remains supported for compatibility',
         },
     ],
     columns: ['status', 'user_id', 'url'],

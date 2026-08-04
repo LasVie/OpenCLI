@@ -53,6 +53,7 @@ describe('manifest helper rules', () => {
         args: [
           {
             name: 'model',
+            placeholder: 'model-name',
             required: true,
             positional: true,
             help: 'Choose a model',
@@ -79,6 +80,7 @@ describe('manifest helper rules', () => {
         args: [
           expect.objectContaining({
             name: 'model',
+            placeholder: 'model-name',
             type: 'str',
             required: true,
             positional: true,

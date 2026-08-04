@@ -211,7 +211,13 @@ export const command = cli({
     strategy: Strategy.COOKIE,
     navigateBefore: false,
     args: [
-        { name: 'note-id', positional: true, required: true, help: 'Full Xiaohongshu note URL with xsec_token, or xhslink short link' },
+        {
+            name: 'note-id',
+            placeholder: 'full-note-url-with-xsec-token-or-xhslink',
+            positional: true,
+            required: true,
+            help: 'Full Xiaohongshu note URL with xsec_token, or xhslink short link',
+        },
         { name: 'output', default: './xiaohongshu-downloads', help: 'Output directory' },
     ],
     columns: ['index', 'type', 'status', 'size'],

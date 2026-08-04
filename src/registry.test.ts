@@ -167,6 +167,24 @@ describe('registerCommand', () => {
 });
 
 describe('normalizeCommand (via registerCommand)', () => {
+  it('preserves valid argument placeholders', () => {
+    registerCommand({
+      site: 'test-norm', name: 'placeholder', access: 'read', description: '',
+      args: [{ name: 'note-id', positional: true, placeholder: 'full-note-url-with-token' }],
+      strategy: Strategy.PUBLIC,
+    });
+    const cmd = getRegistry().get('test-norm/placeholder')!;
+    expect(cmd.args[0].placeholder).toBe('full-note-url-with-token');
+  });
+
+  it('rejects unsafe argument placeholders', () => {
+    expect(() => registerCommand({
+      site: 'test-norm', name: 'bad-placeholder', access: 'read', description: '',
+      args: [{ name: 'note-id', positional: true, placeholder: 'full note url' }],
+      strategy: Strategy.PUBLIC,
+    })).toThrowError(/placeholder must be one non-empty token/);
+  });
+
   it('COOKIE + domain → navigateBefore is the domain URL', () => {
     registerCommand({
       site: 'test-norm', name: 'cookie-domain', access: 'read', description: '', args: [],

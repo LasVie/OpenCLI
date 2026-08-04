@@ -1,9 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import type { CliCommand } from './registry.js';
 import { Strategy } from './registry.js';
-import { formatCommandExample, formatRegistryHelpText, serializeCommand } from './serialization.js';
+import { formatArgSummary, formatCommandExample, formatRegistryHelpText, serializeCommand } from './serialization.js';
 
 describe('formatRegistryHelpText', () => {
+  it('uses a display placeholder without changing the canonical argument name', () => {
+    const cmd: CliCommand = {
+      site: 'xiaohongshu',
+      name: 'note',
+      access: 'read',
+      description: 'Read one note',
+      strategy: Strategy.COOKIE,
+      browser: true,
+      args: [{
+        name: 'note-id',
+        placeholder: 'full-note-url-with-xsec-token',
+        positional: true,
+        required: true,
+      }],
+    };
+
+    expect(formatArgSummary(cmd.args)).toBe('<full-note-url-with-xsec-token>');
+    expect(formatCommandExample(cmd)).toBe(
+      'opencli xiaohongshu note <full-note-url-with-xsec-token> -f yaml',
+    );
+    expect(serializeCommand(cmd).args[0]).toMatchObject({
+      name: 'note-id',
+      placeholder: 'full-note-url-with-xsec-token',
+    });
+  });
+
   it('summarizes long choices lists so help text stays readable', () => {
     const cmd: CliCommand = {
       site: 'demo',

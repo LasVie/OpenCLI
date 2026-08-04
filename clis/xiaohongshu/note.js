@@ -55,7 +55,13 @@ export const command = cli({
     strategy: Strategy.COOKIE,
     navigateBefore: false,
     args: [
-        { name: 'note-id', required: true, positional: true, help: 'Full Xiaohongshu note URL with xsec_token' },
+        {
+            name: 'note-id',
+            placeholder: 'full-note-url-with-xsec-token',
+            required: true,
+            positional: true,
+            help: 'Full Xiaohongshu note URL with xsec_token',
+        },
     ],
     columns: ['field', 'value'],
     func: async (page, kwargs) => {

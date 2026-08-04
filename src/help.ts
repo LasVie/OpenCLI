@@ -193,6 +193,7 @@ export function formatRootAdapterHelpText(groups: RootAdapterGroups): string {
 function compactArg(arg: Arg): Record<string, unknown> {
   return {
     name: arg.name,
+    ...(arg.placeholder ? { placeholder: arg.placeholder } : {}),
     ...(arg.type && arg.type !== 'string' ? { type: arg.type } : {}),
     ...(arg.positional ? { positional: true } : {}),
     ...(arg.required ? { required: true } : {}),
@@ -441,13 +442,17 @@ function commandOptions(cmd: CliCommand): Arg[] {
 
 function formatPositionals(args: readonly Arg[]): string {
   return args
-    .map(arg => arg.required ? `<${arg.name}>` : `[${arg.name}]`)
+    .map(arg => {
+      const valueLabel = arg.placeholder ?? arg.name;
+      return arg.required ? `<${valueLabel}>` : `[${valueLabel}]`;
+    })
     .join(' ');
 }
 
 function formatCommandOptionTerm(arg: Arg): string {
-  if (arg.required || arg.valueRequired) return `--${arg.name} <value>`;
-  return `--${arg.name} [value]`;
+  const valueLabel = arg.placeholder ?? 'value';
+  if (arg.required || arg.valueRequired) return `--${arg.name} <${valueLabel}>`;
+  return `--${arg.name} [${valueLabel}]`;
 }
 
 export function formatCommandListTerm(cmd: CliCommand): string {

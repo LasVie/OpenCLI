@@ -14,6 +14,8 @@ export enum Strategy {
 
 export interface Arg {
   name: string;
+  /** Human-readable value label; `name` remains the canonical kwargs key. */
+  placeholder?: string;
   type?: string;
   default?: unknown;
   required?: boolean;
@@ -184,6 +186,7 @@ export function strategyLabel(cmd: CliCommand): string {
 function normalizeCommand(cmd: RawCliCommand): CliCommand {
   assertCommandAccess(cmd);
   assertSiteSession(cmd);
+  assertArgPlaceholders(cmd);
 
   const strategy = cmd.strategy ?? (cmd.browser === false ? Strategy.PUBLIC : Strategy.COOKIE);
   const browser = cmd.browser ?? (strategy !== Strategy.PUBLIC && strategy !== Strategy.LOCAL);
@@ -203,6 +206,21 @@ function normalizeCommand(cmd: RawCliCommand): CliCommand {
   return browser
     ? { ...cmd, strategy, browser: true, navigateBefore } as BrowserCliCommand
     : { ...cmd, strategy, browser: false, navigateBefore } as NonBrowserCliCommand;
+}
+
+const ARG_PLACEHOLDER_PATTERN = /^[^\s<>"|]+$/;
+
+function assertArgPlaceholders(cmd: Pick<RawCliCommand, 'site' | 'name' | 'args'>): void {
+  const key = `${cmd.site}/${cmd.name}`;
+  for (const arg of cmd.args) {
+    const placeholder: unknown = arg.placeholder;
+    if (placeholder === undefined) continue;
+    if (typeof placeholder !== 'string' || !ARG_PLACEHOLDER_PATTERN.test(placeholder)) {
+      throw new Error(
+        `Command ${key} argument ${arg.name} placeholder must be one non-empty token without whitespace, <, >, ", or |`,
+      );
+    }
+  }
 }
 
 function assertCommandAccess(cmd: Pick<RawCliCommand, 'site' | 'name'> & { access?: unknown }): asserts cmd is RawCliCommand {

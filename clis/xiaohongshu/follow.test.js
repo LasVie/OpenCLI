@@ -190,13 +190,25 @@ describe('xiaohongshu unfollow', () => {
         expect(page.evaluate).toHaveBeenCalledTimes(1);
     });
 
-    it('throws CommandExecutionError when modal confirmation is missing', async () => {
+    it('returns unfollowed when no modal appears and the button flips directly', async () => {
         const page = makePage([
             `https://www.xiaohongshu.com/user/profile/${validId}`,
             { ok: true, state: 'unfollow-clicked' },
             { ok: false, kind: 'no_modal' },
+            { ok: true },
         ]);
-        await expect(getCommand().func(page, { 'user-id': validId })).rejects.toThrowError(/confirmation modal/);
+        const result = await getCommand().func(page, { 'user-id': validId });
+        expect(result[0].status).toBe('unfollowed');
+    });
+
+    it('throws when no modal appears and the profile remains followed', async () => {
+        const page = makePage([
+            `https://www.xiaohongshu.com/user/profile/${validId}`,
+            { ok: true, state: 'unfollow-clicked' },
+            { ok: false, kind: 'no_modal' },
+            { ok: false, reason: 'still following' },
+        ]);
+        await expect(getCommand().func(page, { 'user-id': validId })).rejects.toThrowError(/no confirmation modal appeared; still following/);
     });
 
     it('throws CommandExecutionError when final unfollow verification fails', async () => {

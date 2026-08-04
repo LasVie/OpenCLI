@@ -44034,6 +44034,7 @@
     "args": [
       {
         "name": "note-id",
+        "placeholder": "full-note-url-with-xsec-token",
         "type": "str",
         "required": true,
         "positional": true,
@@ -44270,6 +44271,7 @@
     "args": [
       {
         "name": "note-id",
+        "placeholder": "full-note-url-with-xsec-token-or-xhslink",
         "type": "str",
         "required": true,
         "positional": true,
@@ -44480,10 +44482,11 @@
     "args": [
       {
         "name": "user-id",
+        "placeholder": "full-profile-url",
         "type": "str",
         "required": true,
         "positional": true,
-        "help": "User ID (e.g. 5d8f88dc0000000001005d3a) or profile URL"
+        "help": "Full profile URL preferred; a raw user ID remains supported for compatibility"
       }
     ],
     "columns": [
@@ -44575,6 +44578,7 @@
     "args": [
       {
         "name": "note-id",
+        "placeholder": "full-note-url-with-xsec-token",
         "type": "str",
         "required": true,
         "positional": true,
@@ -44775,10 +44779,11 @@
     "args": [
       {
         "name": "user-id",
+        "placeholder": "full-profile-url",
         "type": "str",
         "required": true,
         "positional": true,
-        "help": "User ID (e.g. 5d8f88dc0000000001005d3a) or profile URL"
+        "help": "Full profile URL preferred; a raw user ID remains supported for compatibility"
       }
     ],
     "columns": [
