@@ -122,6 +122,44 @@ function normalizeResultItem(item) {
     };
 }
 
+function normalizeQuestionResultItem(item) {
+    if (!item || typeof item !== 'object' || item.type !== 'search_result' || !item.object || typeof item.object !== 'object') {
+        return null;
+    }
+    const obj = item.object;
+    if (obj.type === 'question') return normalizeResultItem(item);
+    if (obj.type !== 'answer') return null;
+
+    const question = obj.question;
+    const questionId = question?.id == null ? '' : String(question.id);
+    const title = stripHtml(question?.name || question?.title || '');
+    if (!questionId || !title) {
+        throw new CommandExecutionError('Zhihu search returned malformed nested question identity');
+    }
+    return {
+        item,
+        key: `question:${questionId}`,
+        row: {
+            title,
+            type: 'question',
+            author: question.author?.name || '',
+            votes: 0,
+            url: `https://www.zhihu.com/question/${questionId}`,
+        },
+    };
+}
+
+function normalizeResultForType(item, type) {
+    if (type === 'question') return normalizeQuestionResultItem(item);
+
+    const rawType = item?.object?.type;
+    if (type !== 'all' && rawType && rawType !== type) return null;
+    const normalized = normalizeResultItem(item);
+    if (!normalized) return null;
+    if (type !== 'all' && normalized.row.type !== type) return null;
+    return normalized;
+}
+
 cli({
     site: 'zhihu',
     name: 'search',
@@ -159,11 +197,8 @@ cli({
       })()
     `), url);
             for (const item of data.data) {
-                const rawType = item?.object?.type;
-                if (type !== 'all' && rawType && rawType !== type) continue;
-                const normalized = normalizeResultItem(item);
+                const normalized = normalizeResultForType(item, type);
                 if (!normalized) continue;
-                if (type !== 'all' && normalized.row.type !== type) continue;
                 if (seen.has(normalized.key)) continue;
                 seen.add(normalized.key);
                 results.push(normalized.row);
@@ -203,4 +238,6 @@ export const __test__ = {
     unwrapEvaluateResult,
     requireSearchPayload,
     normalizeResultItem,
+    normalizeQuestionResultItem,
+    normalizeResultForType,
 };

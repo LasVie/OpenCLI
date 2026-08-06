@@ -7,6 +7,8 @@ const {
     normalizeSearchUrl,
     requireSearchPayload,
     normalizeResultItem,
+    normalizeQuestionResultItem,
+    normalizeResultForType,
 } = await import('./search.js').then((m) => m.__test__);
 
 describe('zhihu search', () => {
@@ -125,6 +127,61 @@ describe('zhihu search', () => {
         ]);
     });
 
+    it('projects nested answer hits to unique questions when filtering by question', async () => {
+        const cmd = getRegistry().get('zhihu/search');
+        const page = {
+            goto: vi.fn().mockResolvedValue(undefined),
+            evaluate: vi.fn().mockResolvedValue({
+                data: [
+                    {
+                        type: 'search_result',
+                        object: {
+                            id: 'a1',
+                            type: 'answer',
+                            question: { id: 'q1', name: '<em>AI Agent</em>', author: { name: 'alice' } },
+                        },
+                    },
+                    {
+                        type: 'search_result',
+                        object: {
+                            id: 'a2',
+                            type: 'answer',
+                            question: { id: 'q1', name: 'duplicate answer for the same question' },
+                        },
+                    },
+                    {
+                        type: 'search_result',
+                        object: { id: 'q2', type: 'question', title: 'Direct question' },
+                    },
+                    {
+                        type: 'search_result',
+                        object: { id: 'p1', type: 'article', title: 'Article' },
+                    },
+                ],
+                paging: { is_end: true },
+            }),
+        };
+
+        await expect(cmd.func(page, { query: 'AI Agent', limit: 5, type: 'question' })).resolves.toEqual([
+            {
+                rank: 1,
+                title: 'AI Agent',
+                type: 'question',
+                author: 'alice',
+                votes: 0,
+                url: 'https://www.zhihu.com/question/q1',
+            },
+            {
+                rank: 2,
+                title: 'Direct question',
+                type: 'question',
+                author: '',
+                votes: 0,
+                url: 'https://www.zhihu.com/question/q2',
+            },
+        ]);
+    });
+
     it('maps auth-like failures to AuthRequiredError', async () => {
         const cmd = getRegistry().get('zhihu/search');
         const page = {
@@ -170,6 +227,10 @@ describe('zhihu search', () => {
         expect(() => normalizeResultItem({ type: 'search_result', object: { type: 'article', id: 'p1' } }))
             .toThrow(CommandExecutionError);
         expect(normalizeResultItem({ type: 'hot_timing', object: { type: 'article', id: 'p1' } })).toBe(null);
+        expect(() => normalizeQuestionResultItem({ type: 'search_result', object: { type: 'answer', question: { name: 'missing question id' } } }))
+            .toThrow(CommandExecutionError);
+        expect(normalizeResultForType({ type: 'search_result', object: { type: 'article', id: 'p1', title: 'article' } }, 'question'))
+            .toBe(null);
     });
 
     it('rejects malformed pagination next URLs and reports valid empty result separately', async () => {
